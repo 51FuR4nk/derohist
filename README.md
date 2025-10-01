@@ -13,7 +13,7 @@ Containerised stack for Derohist, composed of a Laravel frontend, a MariaDB stor
    ```bash
    docker compose up --build
    ```
-   The first boot runs the MariaDB schema in `mysql/init/01_schema.sql`, installs PHP dependencies, and starts the Python sync worker. The MariaDB container ships with `max_connections` capped at 200 and a trimmed buffer pool to keep the footprint modest on low-spec VPSs.
+   The first boot runs the MariaDB schema in `mariadb/init/01_schema.sql`, installs PHP dependencies, and starts the Python sync worker. The MariaDB container ships with `max_connections` capped at 200 and a trimmed buffer pool to keep the footprint modest on low-spec VPSs.
    Override `RETENTION_WEEKS` (default `2`) or `BLOCK_TIME_SECONDS` via `docker-compose.yml` if you need a longer or shorter history window.
 4. Visit http://localhost:8080 once the frontend container is healthy.
 

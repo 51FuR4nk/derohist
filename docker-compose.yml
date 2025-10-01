@@ -15,7 +15,7 @@ services:
       MARIADB_ROOT_PASSWORD: rootpass
     volumes:
       - mariadb_data:/var/lib/mysql
-      - ./mysql/init:/docker-entrypoint-initdb.d
+      - ./mariadb/init:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD", "mariadb-admin", "ping", "-uroot", "-prootpass"]
       interval: 5s
