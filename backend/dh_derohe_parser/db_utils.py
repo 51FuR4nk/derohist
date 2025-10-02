@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from collections import Counter
 from datetime import datetime
 
 import mariadb
@@ -51,18 +52,29 @@ class DeroDB():
         return self.cursor.lastrowid
 
     def write_miners(self, height, miners, fees):
-        sql = '''INSERT INTO miners(height, address, miniblock, fees) VALUES '''
-        dm = dict()
-        for miner in miners:
-            if miner in dm.keys():
-                dm[miner] += 1
-            else:
-                dm[miner] = 1
-        for item in dm:
-            sql += "({}, '{}', {}, {}),".format(height, item, dm[item], fees/10*dm[item])
-        self.cursor.execute(sql[:-1])
+        if not miners:
+            return None
+
+        distribution = Counter(miners)
+        if not distribution:
+            return None
+
+        fee_unit = 0.0
+        try:
+            fee_unit = float(fees) / 10.0
+        except (TypeError, ValueError):
+            fee_unit = 0.0
+
+        payload = []
+        for address, count in distribution.items():
+            payload.append((height, address, int(count), fee_unit * count))
+
+        self.cursor.executemany(
+            'INSERT INTO miners(height, address, miniblock, fees) VALUES (?, ?, ?, ?)',
+            payload,
+        )
         self.conn.commit()
-        return self.cursor.lastrowid
+        return self.cursor.lastrowid if payload else None
 
     def get_chain(self):
         sql = '''SELECT * FROM chain'''
