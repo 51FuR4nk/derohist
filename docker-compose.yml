@@ -36,6 +36,7 @@ services:
       DB_DATABASE: appdb
       DB_USERNAME: appuser
       DB_PASSWORD: apppass
+      DONATIONS: ${DONATIONS:-off}
     depends_on:
       mariadb:
         condition: service_healthy

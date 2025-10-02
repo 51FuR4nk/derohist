@@ -47,6 +47,7 @@ All services are orchestrated through `docker-compose.yml`. The default bind mou
 | `TRUST_PROXIES` | IP/CIDR list forwarded to Laravel’s proxy trust middleware. | `"*"` |
 | `DERO_RPC_ENDPOINTS` | Comma-separated RPC URLs queried by the backend worker. | See template |
 | `DERO_SYNC_LAG_THRESHOLD` | Height difference before the UI shows the “syncing” banner. | `10000` |
+| `DONATIONS` | Set to `on` to display the donation modal in the UI. | `off` |
 
 > **Note:** The compose file also declares credentials for MariaDB (`appuser`/`apppass`) and a `rootpass`. Change these before exposing the stack publicly and update the values wherever they appear (`docker-compose.yml`, `frontend/.env`, `.env`).
 
@@ -101,6 +102,12 @@ docker compose run --rm backend python dh_updater.py
 # Clear cached charts or config inside the frontend container
 docker compose exec frontend php artisan cache:clear
 ```
+
+### Showing the donation modal
+
+Set `DONATIONS=on` in the root `.env` (used by Docker Compose) so the frontend container receives the flag. No additional files are required.
+
+If `DONATIONS` is absent or not equal to `on`, the donation icon and modal stay hidden automatically.
 
 ## Local development without Docker (optional)
 

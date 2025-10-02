@@ -98,16 +98,33 @@
       .side-menu-link:hover {
         color: #cb0c9f;
       }
+      .donation-address-btn {
+        font-family: 'Droid Sans Mono', monospace;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        white-space: normal;
+        line-height: 1.4;
+        min-height: 48px;
+      }
+      .donation-address-btn--copied {
+        background-color: #cb0c9f !important;
+        border-color: #cb0c9f !important;
+        color: #fff !important;
+      }
     </style>
   </head>
   <body class="g-sidenav-show bg-gray-100">
     @php
       $activeAddress = request()->query('address');
       $addressQuery = $activeAddress ? ['address' => $activeAddress] : [];
+      $donationsEnabled = strtolower((string) config('app.donations', 'off')) === 'on';
+      $donationFileAvailable = $donationsEnabled;
     @endphp
     <main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg ">
       <!-- Navbar Dark -->
-      <nav class="navbar navbar-expand-lg navbar-dark bg-gradient-dark z-index-3 py-3">
+      <nav class="navbar navbar-expand-lg navbar-dark bg-gradient-dark z-index-3 py-2">
         <div class="container d-flex align-items-center justify-content-between">
           <div class="d-flex align-items-center">
             <button id="menuToggle" class="menu-toggle text-white" aria-label="Apri menu" aria-controls="sideMenu" aria-expanded="false">
@@ -126,14 +143,51 @@
                 </div>
               </form>
             </div>
-            <div class="col-auto">
+            <div class="col-auto d-flex align-items-center gap-3">
               <a href="https://github.com/51FuR4nk/derohist" class="text-white d-flex align-items-center" target="_blank" rel="noopener noreferrer" aria-label="Open project GitHub repository">
                 <i class="fab fa-github fa-lg"></i>
               </a>
+              @if($donationFileAvailable)
+                <button type="button" class="text-white bg-transparent border-0 d-flex align-items-center p-0" data-bs-toggle="modal" data-bs-target="#donationModal" aria-label="Open donations modal" style="margin-top: 2px; line-height: 1;">
+                  <i class="fas fa-donate fa-lg"></i>
+                </button>
+              @endif
             </div>
           </div>
         </div>
       </nav>
+      @if($donationFileAvailable)
+      <div class="modal fade" id="donationModal" tabindex="-1" aria-labelledby="donationModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+          <div class="modal-content">
+            <div class="modal-header border-0 pb-0 flex-column text-center">
+              <h4 class="modal-title w-100 fw-bold fs-4 mb-2" id="donationModalLabel">Support Derohist</h4>
+              <p class="text-sm text-muted mb-0">Derohist is powered by volunteers&mdash;your contribution helps cover infrastructure and maintenance costs.</p>
+            </div>
+            <div class="modal-body pt-0 text-center">
+              <p class="text-sm">If the dashboard helps your mining operations, consider sending a donation. Please leave your name in the transaction comment if you would like to be mentioned.</p>
+              <div class="mb-3">
+                <span class="d-block text-uppercase text-xxs text-muted fw-bold">Send DERO</span>
+                <button type="button" class="btn btn-outline-secondary btn-sm w-100 mt-1 donation-address-btn" data-address="dero1qyg58hjdwylulgxw3j7mx2gqw5eergsx40xgsjz9pkph786hxpg9yqg9752lh" onclick="copyDonationAddress(this)">
+                  dero1qyg58hjdwylulgxw3j7mx2gqw5eergsx40xgsjz9pkph786hxpg9yqg9752lh
+                </button>
+              </div>
+              <div class="mb-3">
+                <span class="d-block text-uppercase text-xxs text-muted fw-bold">Send via Alias</span>
+                <button type="button" class="btn btn-outline-secondary btn-sm w-100 mt-1 donation-address-btn" data-address="derohist" onclick="copyDonationAddress(this)">
+                  derohist
+                </button>
+              </div>
+              <p class="text-xs text-muted">Thank you for supporting Derohist&mdash;every contribution helps keep the project running.</p>
+              {{-- Donation history intentionally hidden for now --}}
+            </div>
+            <div class="modal-footer border-0 pt-0 justify-content-center">
+              <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Close</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      @endif
       <div id="sideMenuOverlay" class="side-menu-overlay" role="presentation"></div>
       <aside id="sideMenu" class="side-menu" aria-hidden="true">
         <div class="side-menu-header">
@@ -230,6 +284,34 @@
           }
         });
       });
+
+      function copyDonationAddress(button) {
+        const address = button.dataset.address || '';
+
+        if (!address || !navigator.clipboard) {
+          return;
+        }
+
+        if (!button.dataset.originalText) {
+          button.dataset.originalText = button.innerHTML;
+        }
+
+        if (button._copyResetTimer) {
+          clearTimeout(button._copyResetTimer);
+          button._copyResetTimer = null;
+        }
+
+        navigator.clipboard.writeText(address).then(() => {
+          button.innerHTML = '<i class="fas fa-check me-1"></i>Copied!';
+          button.classList.add('donation-address-btn--copied');
+
+          button._copyResetTimer = setTimeout(() => {
+            button.innerHTML = button.dataset.originalText;
+            button.classList.remove('donation-address-btn--copied');
+            button._copyResetTimer = null;
+          }, 2000);
+        });
+      }
     </script>
 
     @yield('script')
