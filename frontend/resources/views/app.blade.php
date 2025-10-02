@@ -117,16 +117,21 @@
               DEROHIST
             </a>
           </div>
-          <div class="row" style="flex-grow: 1; justify-content: end;">
-            <form method="get">
-              <div class="col-auto" style="flex-grow: 0.8;">
-                <div class="bg-white border-radius-lg d-flex me-2">
+          <div class="row align-items-center" style="flex-grow: 1; justify-content: end;">
+            <div class="col-auto" style="flex-grow: 0.8;">
+              <form method="get" class="d-flex justify-content-end">
+                <div class="bg-white border-radius-lg d-flex me-2 w-100">
                   <input type="text" class="form-control border-0 ps-3" placeholder="Your wallet public address..." name="address" value="{{ request('address') }}">
                   <button class="btn bg-gradient-primary my-1 me-1">Apply</button>
                 </div>
-              </div>
-            </form>
+              </form>
             </div>
+            <div class="col-auto">
+              <a href="https://github.com/51FuR4nk/derohist" class="text-white d-flex align-items-center" target="_blank" rel="noopener noreferrer" aria-label="Open project GitHub repository">
+                <i class="fab fa-github fa-lg"></i>
+              </a>
+            </div>
+          </div>
         </div>
       </nav>
       <div id="sideMenuOverlay" class="side-menu-overlay" role="presentation"></div>
