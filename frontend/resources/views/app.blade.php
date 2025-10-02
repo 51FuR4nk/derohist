@@ -165,7 +165,7 @@
               <p class="text-sm text-muted mb-0">Derohist is powered by volunteers&mdash;your contribution helps cover infrastructure and maintenance costs.</p>
             </div>
             <div class="modal-body pt-0 text-center">
-              <p class="text-sm">If the dashboard helps your mining operations, consider sending a donation. Please leave your name in the transaction comment if you would like to be mentioned.</p>
+              <p class="text-sm">If the dashboard helps your mining operations, consider sending a donation.</p>
               <div class="mb-3">
                 <span class="d-block text-uppercase text-xxs text-muted fw-bold">Send DERO</span>
                 <button type="button" class="btn btn-outline-secondary btn-sm w-100 mt-1 donation-address-btn" data-address="dero1qyg58hjdwylulgxw3j7mx2gqw5eergsx40xgsjz9pkph786hxpg9yqg9752lh" onclick="copyDonationAddress(this)">
