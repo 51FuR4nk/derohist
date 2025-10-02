@@ -372,62 +372,84 @@
         applyRankingHighlight(null);
       });
 
-      $.ajax({
-        method: 'GET',
-        url: '{{ route('api.charts.get_active_miners_over_time', [], false) }}?tz=' + tzParam,
-        success: function (response) {
-          $('.active_miners_over_time_updated_at').text(response.updated_at);
-          chartActiveMiners.data.labels = response.labels;
-          chartActiveMiners.data.datasets[0].data = response.data;
-          chartActiveMiners.update();
-        },
-        error: function (error) {
-          console.log(error);
+      let chartsDataLoaded = false;
+      const loadMinersChartsData = function () {
+        if (chartsDataLoaded) {
+          return;
         }
-      });
+        chartsDataLoaded = true;
 
-      $.ajax({
-        method: 'GET',
-        url: '{{ route('api.charts.get_top_miners_positions_over_time', [], false) }}?tz=' + tzParam,
-        success: function (response) {
-          $('.top_miners_positions_updated_at').text(response.updated_at);
-          chartTopMinersPositions.data.labels = response.labels;
+        $.ajax({
+          method: 'GET',
+          url: '{{ route('api.charts.get_active_miners_over_time', [], false) }}?tz=' + tzParam,
+          success: function (response) {
+            $('.active_miners_over_time_updated_at').text(response.updated_at);
+            chartActiveMiners.data.labels = response.labels;
+            chartActiveMiners.data.datasets[0].data = response.data;
+            chartActiveMiners.update();
+          }
+        });
 
-          const sortedSeries = (response.series || []).slice().sort(function (a, b) {
-            const posA = a.today_position ?? Number.POSITIVE_INFINITY;
-            const posB = b.today_position ?? Number.POSITIVE_INFINITY;
-            if (posA === posB) {
-              return (a.address || '').localeCompare(b.address || '');
+        $.ajax({
+          method: 'GET',
+          url: '{{ route('api.charts.get_top_miners_positions_over_time', [], false) }}?tz=' + tzParam,
+          success: function (response) {
+            $('.top_miners_positions_updated_at').text(response.updated_at);
+            chartTopMinersPositions.data.labels = response.labels;
+
+            const sortedSeries = (response.series || []).slice().sort(function (a, b) {
+              const posA = a.today_position ?? Number.POSITIVE_INFINITY;
+              const posB = b.today_position ?? Number.POSITIVE_INFINITY;
+              if (posA === posB) {
+                return (a.address || '').localeCompare(b.address || '');
+              }
+              return posA - posB;
+            });
+
+            chartTopMinersPositions.data.datasets = sortedSeries.map(function (item, index) {
+              const color = rankingColors[index % rankingColors.length];
+              return {
+                label: item.label,
+                data: item.positions,
+                borderColor: color,
+                backgroundColor: hexToRgba(color, 0.18),
+                fill: false,
+                tension: 0.25,
+                spanGaps: true,
+                pointRadius: 1,
+                pointHoverRadius: 4,
+                pointHitRadius: 6,
+                pointBackgroundColor: color,
+                metaTotals: item.totals,
+                metaAddress: item.address,
+                metaColor: color,
+                metaTodayPosition: item.today_position,
+              };
+            });
+            applyRankingHighlight(null);
+          }
+        });
+      };
+
+      if ('IntersectionObserver' in window) {
+        const observer = new IntersectionObserver(function (entries) {
+          entries.forEach(function (entry) {
+            if (entry.isIntersecting) {
+              loadMinersChartsData();
+              observer.disconnect();
             }
-            return posA - posB;
           });
+        }, { threshold: 0.1 });
 
-          chartTopMinersPositions.data.datasets = sortedSeries.map(function (item, index) {
-            const color = rankingColors[index % rankingColors.length];
-            return {
-              label: item.label,
-              data: item.positions,
-              borderColor: color,
-              backgroundColor: hexToRgba(color, 0.18),
-              fill: false,
-              tension: 0.25,
-              spanGaps: true,
-              pointRadius: 1,
-              pointHoverRadius: 4,
-              pointHitRadius: 6,
-              pointBackgroundColor: color,
-              metaTotals: item.totals,
-              metaAddress: item.address,
-              metaColor: color,
-              metaTodayPosition: item.today_position,
-            };
-          });
-          applyRankingHighlight(null);
-        },
-        error: function (error) {
-          console.log(error);
+        const target = document.getElementById('chart_active_miners_over_time');
+        if (target) {
+          observer.observe(target);
+        } else {
+          loadMinersChartsData();
         }
-      });
+      } else {
+        loadMinersChartsData();
+      }
     });
   </script>
 @endsection

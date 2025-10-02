@@ -31,7 +31,9 @@ class ApiChartsController extends Controller
             'diff'   => round($diff*100/$yesterday, 2),
         ];
 
-        return response()->json($data, 200, [], JSON_NUMERIC_CHECK);
+        return response()
+            ->json($data, 200, [], JSON_NUMERIC_CHECK)
+            ->header('Cache-Control', 'public, max-age=120, stale-while-revalidate=60');
     }
 
     public function get_top_miners_in_last_24h(Request $request, ChainRepositoryInterface $chain) {
@@ -65,7 +67,9 @@ class ApiChartsController extends Controller
             'updated_at' => Carbon::createFromFormat('Y-m-d H:i:s', $series['updated_at'], $validated['tz'])->format('M d,  H:i'),
         ];
 
-        return response()->json($data, 200, [], JSON_NUMERIC_CHECK);
+        return response()
+            ->json($data, 200, [], JSON_NUMERIC_CHECK)
+            ->header('Cache-Control', 'public, max-age=120, stale-while-revalidate=60');
     }
 
     public function get_top_miners_positions_over_time(Request $request, ChainRepositoryInterface $chain) {
@@ -102,7 +106,9 @@ class ApiChartsController extends Controller
             'updated_at' => Carbon::createFromFormat('Y-m-d H:i:s', $series['updated_at'], $validated['tz'])->format('M d,  H:i'),
         ];
 
-        return response()->json($data, 200, [], JSON_NUMERIC_CHECK);
+        return response()
+            ->json($data, 200, [], JSON_NUMERIC_CHECK)
+            ->header('Cache-Control', 'public, max-age=120, stale-while-revalidate=60');
     }
 
     public function get_wallet_daily_gain(Request $request, ChainRepositoryInterface $chain) {
@@ -146,7 +152,9 @@ class ApiChartsController extends Controller
             'last_24h'   => $overlay,
         ];
 
-        return response()->json($data, 200, [], JSON_NUMERIC_CHECK);
+        return response()
+            ->json($data, 200, [], JSON_NUMERIC_CHECK)
+            ->header('Cache-Control', 'public, max-age=120, stale-while-revalidate=60');
     }
 
     public function get_wallet_compute_power(Request $request, ChainRepositoryInterface $chain) {
@@ -176,7 +184,9 @@ class ApiChartsController extends Controller
             'diff'       => $powerYesterday > 0 ? round($powerDiff * 100 / $powerYesterday, 2) : 0,
         ];
 
-        return response()->json($data, 200, [], JSON_NUMERIC_CHECK);
+        return response()
+            ->json($data, 200, [], JSON_NUMERIC_CHECK)
+            ->header('Cache-Control', 'public, max-age=120, stale-while-revalidate=60');
     }
 
     public function get_wallet_hourly_gain(Request $request, ChainRepositoryInterface $chain) {
@@ -198,7 +208,9 @@ class ApiChartsController extends Controller
             'updated_at' => Carbon::createFromFormat('Y-m-d H:i:s', $data['updated_at'], $validated['tz'])->format('M d,  H:i'),
         ];
 
-        return response()->json($data, 200, [], JSON_NUMERIC_CHECK);
+        return response()
+            ->json($data, 200, [], JSON_NUMERIC_CHECK)
+            ->header('Cache-Control', 'public, max-age=120, stale-while-revalidate=60');
     }
 
     public function get_hourly_difficulty(Request $request, ChainRepositoryInterface $chain) {

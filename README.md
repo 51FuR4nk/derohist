@@ -112,9 +112,10 @@ Leave `DONATIONS` unset (or set it to `on`) to show the donation icon by default
 Fresh installs pick up the latest schema automatically. If you already have a database volume, add the new covering indexes once:
 
 ```bash
-docker compose exec mariadb mariadb -u"$MARIADB_USER" -p"$MARIADB_PASSWORD" appdb \
-  -e "ALTER TABLE miners ADD KEY idx_miners_address_height (address, height);" \
-  -e "ALTER TABLE blockchain_tx_address ADD KEY idx_tx_addr_address_height (address, height);"
+docker compose exec mariadb sh -c \
+  'mariadb -u"$MARIADB_USER" -p"$MARIADB_PASSWORD" appdb \
+    -e "ALTER TABLE miners ADD KEY idx_miners_address_height (address, height);" \
+    -e "ALTER TABLE blockchain_tx_address ADD KEY idx_tx_addr_address_height (address, height);"'
 ```
 
 ## Local development without Docker (optional)
