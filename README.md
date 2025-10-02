@@ -107,6 +107,16 @@ docker compose exec frontend php artisan cache:clear
 
 Leave `DONATIONS` unset (or set it to `on`) to show the donation icon by default. Set `DONATIONS=off` in the root `.env` if you prefer to hide it.
 
+### Optional: upgrade existing MariaDB indexes
+
+Fresh installs pick up the latest schema automatically. If you already have a database volume, add the new covering indexes once:
+
+```bash
+docker compose exec mariadb mariadb -u"$MARIADB_USER" -p"$MARIADB_PASSWORD" appdb \
+  -e "ALTER TABLE miners ADD KEY idx_miners_address_height (address, height);" \
+  -e "ALTER TABLE blockchain_tx_address ADD KEY idx_tx_addr_address_height (address, height);"
+```
+
 ## Local development without Docker (optional)
 
 ### Backend (Python)
@@ -115,7 +125,7 @@ Leave `DONATIONS` unset (or set it to `on`) to show the donation icon by default
 python -m venv .venv
 source .venv/bin/activate
 pip install -e backend
-export DB_HOST=127.0.0.1 DB_NAME=appdb DB_USER=appuser DB_PASSWORD=apppass
+export DB_HOST=127.0.0.1 DB_NAME=appdb DB_USER=${MARIADB_USER:-appuser} DB_PASSWORD=${MARIADB_PASSWORD:-apppass}
 python backend/dh_updater.py
 ```
 

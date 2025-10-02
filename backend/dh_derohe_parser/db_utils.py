@@ -155,13 +155,8 @@ class DeroDB():
         return None
 
     def purge_before_height(self, min_height):
-        queries = [
-            ("DELETE FROM blockchain_tx_address WHERE height < ?", (min_height,)),
-            ("DELETE FROM deducted_transaction WHERE height < ?", (min_height,)),
-            ("DELETE FROM miners WHERE height < ?", (min_height,)),
-            ("DELETE FROM blockchain_transactions WHERE height < ?", (min_height,)),
-            ("DELETE FROM chain WHERE height < ?", (min_height,)),
-        ]
-        for sql, params in queries:
-            self.cursor.execute(sql, params)
+        if min_height <= 0:
+            return
+
+        self.cursor.execute("DELETE FROM chain WHERE height < ?", (min_height,))
         self.conn.commit()

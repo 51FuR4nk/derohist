@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS blockchain_tx_address (
     UNIQUE KEY uq_tx_address (address, hash),
     KEY idx_tx_addr_height (height),
     KEY idx_tx_addr_address (address),
+    KEY idx_tx_addr_address_height (address, height),
     CONSTRAINT fk_tx_addr_chain FOREIGN KEY (height) REFERENCES chain(height) ON DELETE CASCADE,
     CONSTRAINT fk_tx_addr_transaction FOREIGN KEY (hash) REFERENCES blockchain_transactions(hash) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -66,6 +67,7 @@ CREATE TABLE IF NOT EXISTS miners (
     fees DECIMAL(20, 8) DEFAULT 0,
     KEY idx_miners_height (height),
     KEY idx_miners_address (address),
+    KEY idx_miners_address_height (address, height),
     CONSTRAINT fk_miners_chain FOREIGN KEY (height) REFERENCES chain(height) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
