@@ -393,12 +393,13 @@ class DeroChainRepository implements ChainRepositoryInterface {
                 ->where('timestamp', '<', $endUtc->format('Y-m-d H:i:s'));
 
             $rows = DB::table(DB::raw('(' . $subQuery->toSql() . ') as c1'))
-                ->selectRaw('DATE(timestamp) as date, HOUR(timestamp) as hour, SUM(miniblock)*0.0615 + SUM(fees) as gain')
+                ->selectRaw('DATE(timestamp) as date, HOUR(timestamp) as hour, (COALESCE(SUM(miniblock), 0) * 0.0615) + COALESCE(SUM(fees), 0) as gain')
                 ->leftJoin('miners', 'c1.height', '=', 'miners.height')
                 ->mergeBindings($subQuery)
                 ->where('address', $address)
                 ->groupBy('date', 'hour')
-                ->orderBy('date', 'ASC', 'hour', 'ASC')
+                ->orderBy('date', 'ASC')
+                ->orderBy('hour', 'ASC')
                 ->get();
 
             foreach ($rows as $row) {

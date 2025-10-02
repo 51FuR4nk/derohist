@@ -248,7 +248,8 @@
 @section('script')
     <script>
       $(function () {
-        tz = moment.tz.guess();
+        const tz = moment.tz.guess();
+        const tzParam = encodeURIComponent(tz);
         console.log(tz);
 
         var canvas = $('<canvas/>').get(0).getContext("2d");
@@ -361,7 +362,7 @@
 
         $.ajax({
             method: 'GET',
-            url: '{{ route('api.charts.avg_difficulty_per_last_n_days', [], false) }}?tz=' + tz,
+            url: '{{ route('api.charts.avg_difficulty_per_last_n_days', [], false) }}?tz=' + tzParam,
             success: function(data) {
               if (data.diff > 0) {
                 $('.avg_difficulty_diff').html('<i class="fa fa-arrow-up text-danger" aria-hidden="true"></i><span class="font-weight-bold">' + Math.abs(data.diff) + '% more</span> today');
@@ -478,7 +479,7 @@
           });
           $.ajax({
               method: 'GET',
-              url: '{{ route('api.charts.get_wallet_daily_gain', [], false) }}?address=' + '{{ $address }}' + '&tz=' + tz,
+              url: '{{ route('api.charts.get_wallet_daily_gain', [], false) }}?address=' + '{{ $address }}' + '&tz=' + tzParam,
               success: function(data) {
                 if (data.diff > 0) {
                   $('.wallet_daily_gain_diff').html('<i class="fa fa-arrow-up text-success" aria-hidden="true"></i><span class="font-weight-bold">' + Math.abs(data.diff) + '% more</span> today (estimation)');
@@ -581,7 +582,7 @@
           });
           $.ajax({
               method: 'GET',
-              url: '{{ route('api.charts.get_wallet_hourly_gain', [], false) }}?address=' + '{{ $address }}' + '&tz=' + tz,
+              url: '{{ route('api.charts.get_wallet_hourly_gain', [], false) }}?address=' + '{{ $address }}' + '&tz=' + tzParam,
               success: function(data) {
                 $('.wallet_hourly_gain_updated_at').text(data.updated_at);
 
@@ -676,7 +677,7 @@
           });
           $.ajax({
               method: 'GET',
-              url: '{{ route('api.charts.get_hourly_difficulty', [], false) }}?tz=' + tz,
+              url: '{{ route('api.charts.get_hourly_difficulty', [], false) }}?tz=' + tzParam,
               success: function(data) {
                 $('.hourly_difficulty_updated_at').text(data.updated_at);
 
@@ -774,7 +775,7 @@
           });
         $.ajax({
             method: 'GET',
-            url: '{{ route('api.charts.get_wallet_compute_power', [], false) }}?address=' + '{{ $address }}' + '&tz=' + tz,
+            url: '{{ route('api.charts.get_wallet_compute_power', [], false) }}?address=' + '{{ $address }}' + '&tz=' + tzParam,
             success: function(data) {
               if (data.diff > 0) {
                   $('.avg_power_diff').html('<i class="fa fa-arrow-up text-success" aria-hidden="true"></i><span class="font-weight-bold">' + Math.abs(data.diff) + '% more</span> today');
