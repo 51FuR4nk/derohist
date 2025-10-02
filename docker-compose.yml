@@ -10,9 +10,9 @@ services:
     ]
     environment:
       MARIADB_DATABASE: appdb
-      MARIADB_USER: appuser
-      MARIADB_PASSWORD: apppass
-      MARIADB_ROOT_PASSWORD: rootpass
+      MARIADB_USER: ${MARIADB_USER}
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
     volumes:
       - mariadb_data:/var/lib/mysql
       - ./mariadb/init:/docker-entrypoint-initdb.d
@@ -34,9 +34,9 @@ services:
       DB_HOST: mariadb
       DB_PORT: 3306
       DB_DATABASE: appdb
-      DB_USERNAME: appuser
-      DB_PASSWORD: apppass
-      DONATIONS: ${DONATIONS:-off}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DONATIONS: ${DONATIONS:-on}
     depends_on:
       mariadb:
         condition: service_healthy
@@ -53,8 +53,8 @@ services:
     environment:
       DB_HOST: mariadb
       DB_NAME: appdb
-      DB_USER: appuser
-      DB_PASSWORD: apppass
+      DB_USER: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
       LOG_LEVEL: INFO
       RETENTION_WEEKS: "5"
       BLOCK_TIME_SECONDS: "18"

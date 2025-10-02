@@ -56,7 +56,7 @@ return [
 
     'asset_url' => env('ASSET_URL', null),
 
-    'donations' => env('DONATIONS', 'off'),
+    'donations' => env('DONATIONS', 'on'),
 
     /*
     |--------------------------------------------------------------------------

@@ -47,9 +47,9 @@ All services are orchestrated through `docker-compose.yml`. The default bind mou
 | `TRUST_PROXIES` | IP/CIDR list forwarded to Laravel’s proxy trust middleware. | `"*"` |
 | `DERO_RPC_ENDPOINTS` | Comma-separated RPC URLs queried by the backend worker. | See template |
 | `DERO_SYNC_LAG_THRESHOLD` | Height difference before the UI shows the “syncing” banner. | `10000` |
-| `DONATIONS` | Set to `on` to display the donation modal in the UI. | `off` |
+| `DONATIONS` | Set to `off` to hide the donation modal in the UI. | `on` |
 
-> **Note:** The compose file also declares credentials for MariaDB (`appuser`/`apppass`) and a `rootpass`. Change these before exposing the stack publicly and update the values wherever they appear (`docker-compose.yml`, `frontend/.env`, `.env`).
+> **Note:** Database credentials are sourced from `.env` (see `MARIADB_USER`, `MARIADB_PASSWORD`, `MARIADB_ROOT_PASSWORD`). Update them before exposing the stack publicly.
 
 ### Frontend `.env`
 
@@ -61,7 +61,7 @@ The Laravel container mounts `frontend/.env`. If you need to override values, ed
 | `APP_URL` | Base URL used by the frontend. Should match the host/port you use locally. | `http://localhost:8080` |
 | `DB_CONNECTION` | Connection driver. | `mysql` |
 | `DB_HOST`, `DB_PORT` | Database host/port. Inside Docker these are the service name and `3306`. | `mysql` (overridden to `mariadb` via compose) |
-| `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` | Credentials that must align with the MariaDB container values. | `appdb`, `appuser`, `apppass` |
+| `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` | Credentials that must align with the MariaDB container values. | `appdb`, `${MARIADB_USER}`, `${MARIADB_PASSWORD}` |
 
 ## Run with Docker Compose
 
@@ -105,9 +105,7 @@ docker compose exec frontend php artisan cache:clear
 
 ### Showing the donation modal
 
-Set `DONATIONS=on` in the root `.env` (used by Docker Compose) so the frontend container receives the flag. No additional files are required.
-
-If `DONATIONS` is absent or not equal to `on`, the donation icon and modal stay hidden automatically.
+Leave `DONATIONS` unset (or set it to `on`) to show the donation icon by default. Set `DONATIONS=off` in the root `.env` if you prefer to hide it.
 
 ## Local development without Docker (optional)
 
