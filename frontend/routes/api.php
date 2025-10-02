@@ -21,6 +21,12 @@ Route::get('/charts/avg_difficulty_per_last_n_days', [ApiChartsController::class
 Route::get('/charts/get_top_miners_in_last_24h', [ApiChartsController::class, 'get_top_miners_in_last_24h'])
     ->name('api.charts.get_top_miners_in_last_24h');
 
+Route::get('/charts/get_active_miners_over_time', [ApiChartsController::class, 'get_active_miners_over_time'])
+    ->name('api.charts.get_active_miners_over_time');
+
+Route::get('/charts/get_top_miners_positions_over_time', [ApiChartsController::class, 'get_top_miners_positions_over_time'])
+    ->name('api.charts.get_top_miners_positions_over_time');
+
 Route::get('/charts/get_wallet_daily_gain', [ApiChartsController::class, 'get_wallet_daily_gain'])
     ->name('api.charts.get_wallet_daily_gain');
 

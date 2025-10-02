@@ -145,6 +145,146 @@ class DeroChainRepository implements ChainRepositoryInterface {
         ];
     }
 
+    public function get_active_miners_over_time(int $days = 30, string $tz = 'UTC') {
+        $tzObject = new \DateTimeZone($tz);
+        $todayLocal = Carbon::now($tzObject)->startOfDay();
+        $yesterdayLocal = $todayLocal->copy()->subDay();
+        $startLocal = $todayLocal->copy()->subDays(max(0, $days - 1));
+
+        $slots = collect();
+        for ($cursor = $startLocal->copy(); $cursor->lte($todayLocal); $cursor->addDay()) {
+            $key = $cursor->format('Y-m-d');
+            $slots[$key] = (object) [
+                'date' => $key,
+                'active_miners' => 0,
+            ];
+        }
+
+        $staticKey = sprintf('miners.active_over_time.static.%s.%d', strtolower($tz), $days);
+        $staticData = Cache::get($staticKey);
+        $expectedThrough = $yesterdayLocal->format('Y-m-d');
+
+        if (!$staticData || ($staticData['through_date'] ?? null) !== $expectedThrough) {
+            $staticRows = $this->queryActiveMinersRange($startLocal, $todayLocal, $tz);
+            $staticData = [
+                'through_date' => $expectedThrough,
+                'data' => $staticRows,
+            ];
+            Cache::forever($staticKey, $staticData);
+        }
+
+        foreach ($staticData['data'] ?? [] as $date => $value) {
+            if (isset($slots[$date])) {
+                $slots[$date]->active_miners = (int) $value;
+            }
+        }
+
+        $currentRows = $this->queryActiveMinersRange($todayLocal, $todayLocal->copy()->addDay(), $tz);
+        foreach ($currentRows as $date => $value) {
+            if (isset($slots[$date])) {
+                $slots[$date]->active_miners = (int) $value;
+            }
+        }
+
+        return [
+            'updated_at' => Carbon::now($tzObject)->format('Y-m-d H:i:s'),
+            'data' => $slots->values(),
+        ];
+    }
+
+    public function get_top_miners_positions_over_time(int $days = 30, int $limit = 10, string $tz = 'UTC') {
+        $limit = max(1, $limit);
+
+        $tzObject = new \DateTimeZone($tz);
+        $todayLocal = Carbon::now($tzObject)->startOfDay();
+        $yesterdayLocal = $todayLocal->copy()->subDay();
+        $startLocal = $todayLocal->copy()->subDays(max(0, $days - 1));
+
+        $dateKeys = [];
+        for ($cursor = $startLocal->copy(); $cursor->lte($todayLocal); $cursor->addDay()) {
+            $dateKeys[] = $cursor->format('Y-m-d');
+        }
+
+        $topAddresses = $this->resolveTopMinerAddresses($startLocal, $todayLocal, $tz, $limit);
+
+        if (empty($topAddresses)) {
+            return [
+                'updated_at' => Carbon::now($tzObject)->format('Y-m-d H:i:s'),
+                'dates' => $dateKeys,
+                'series' => [],
+            ];
+        }
+
+        $hash = md5(implode('|', $topAddresses));
+        $staticKey = sprintf('miners.positions_over_time.static.%s.%d.%d', strtolower($tz), $days, $limit);
+        $staticData = Cache::get($staticKey);
+        $expectedThrough = $yesterdayLocal->format('Y-m-d');
+
+        if (! $staticData
+            || ($staticData['through_date'] ?? null) !== $expectedThrough
+            || ($staticData['top_hash'] ?? null) !== $hash) {
+            $staticRows = $this->queryTopMinerPositions($startLocal, $todayLocal, $tz, $topAddresses);
+            $staticData = [
+                'through_date' => $expectedThrough,
+                'top_hash' => $hash,
+                'data' => $staticRows,
+            ];
+            Cache::forever($staticKey, $staticData);
+        }
+
+        $positionsByDate = $staticData['data'] ?? [];
+
+        $currentRows = $this->queryTopMinerPositions($todayLocal, $todayLocal->copy()->addDay(), $tz, $topAddresses);
+        foreach ($currentRows as $date => $rows) {
+            $positionsByDate[$date] = $rows;
+        }
+
+        $series = [];
+        foreach ($topAddresses as $address) {
+            $positions = [];
+            $totals = [];
+            $todayPosition = null;
+            foreach ($dateKeys as $dateKey) {
+                if (isset($positionsByDate[$dateKey][$address])) {
+                    $positionValue = (int) $positionsByDate[$dateKey][$address]['position'];
+                    $positions[] = $positionValue;
+                    $totals[] = (float) $positionsByDate[$dateKey][$address]['total_miniblocks'];
+                    if ($dateKey === $todayLocal->format('Y-m-d')) {
+                        $todayPosition = $positionValue;
+                    }
+                } else {
+                    $positions[] = null;
+                    $totals[] = 0.0;
+                }
+            }
+
+            $series[] = [
+                'address' => $address,
+                'label' => substr($address, -7),
+                'positions' => $positions,
+                'totals' => $totals,
+                'today_position' => $todayPosition,
+            ];
+        }
+
+        usort($series, function ($a, $b) {
+            $posA = $a['today_position'] ?? INF;
+            $posB = $b['today_position'] ?? INF;
+
+            if ($posA === $posB) {
+                return strcmp($a['address'], $b['address']);
+            }
+
+            return $posA <=> $posB;
+        });
+
+        return [
+            'updated_at' => Carbon::now($tzObject)->format('Y-m-d H:i:s'),
+            'dates' => $dateKeys,
+            'series' => $series,
+        ];
+    }
+
     private function _create_daily_interval_from_now($days, $tz) {
         $tzObject = new \DateTimeZone($tz);
 
@@ -184,6 +324,153 @@ class DeroChainRepository implements ChainRepositoryInterface {
         ];
 
         return in_array($address, $whitelist);
+    }
+
+    private function queryActiveMinersRange(Carbon $startLocal, Carbon $endLocal, string $tz): array {
+        if ($startLocal->gte($endLocal)) {
+            return [];
+        }
+
+        DB::statement("SET time_zone='+00:00';");
+
+        $startUtc = $startLocal->copy()->setTimezone('UTC');
+        $endUtc = $endLocal->copy()->setTimezone('UTC');
+
+        $rows = DB::table('miners')
+            ->join('chain', 'chain.height', '=', 'miners.height')
+            ->selectRaw(
+                'DATE(CONVERT_TZ(chain.timestamp, "UTC", ?)) as local_date, COUNT(DISTINCT miners.address) as active_miners',
+                [$tz]
+            )
+            ->where('chain.timestamp', '>=', $startUtc->format('Y-m-d H:i:s'))
+            ->where('chain.timestamp', '<', $endUtc->format('Y-m-d H:i:s'))
+            ->groupBy('local_date')
+            ->orderBy('local_date')
+            ->get();
+
+        $result = [];
+        foreach ($rows as $row) {
+            $date = Carbon::createFromFormat('Y-m-d', $row->local_date, $tz)->format('Y-m-d');
+            $result[$date] = (int) $row->active_miners;
+        }
+
+        return $result;
+    }
+
+    private function resolveTopMinerAddresses(Carbon $startLocal, Carbon $todayLocal, string $tz, int $limit): array {
+        DB::statement("SET time_zone='+00:00';");
+
+        $days = max(1, $todayLocal->diffInDays($startLocal) + 1);
+        $staticKey = sprintf('miners.top_active_addresses.%s.%d.%d', strtolower($tz), $days, $limit);
+
+        $totals = [];
+
+        if ($startLocal->lt($todayLocal)) {
+            $yesterdayLocal = $todayLocal->copy()->subDay();
+            $marker = $yesterdayLocal->format('Y-m-d');
+            $cached = Cache::get($staticKey);
+
+            if (! $cached || ($cached['through_date'] ?? null) !== $marker) {
+                $staticTotals = $this->queryMinerTotalsByRange($startLocal, $todayLocal, $tz);
+                $cached = [
+                    'through_date' => $marker,
+                    'totals' => $staticTotals,
+                ];
+                Cache::forever($staticKey, $cached);
+            }
+
+            $totals = $cached['totals'] ?? [];
+        }
+
+        $currentTotals = $this->queryMinerTotalsByRange($todayLocal, $todayLocal->copy()->addDay(), $tz);
+        foreach ($currentTotals as $address => $value) {
+            $totals[$address] = ($totals[$address] ?? 0.0) + $value;
+        }
+
+        arsort($totals, SORT_NUMERIC);
+
+        return array_slice(array_keys($totals), 0, $limit);
+    }
+
+    private function queryMinerTotalsByRange(Carbon $startLocal, Carbon $endLocal, string $tz): array {
+        if ($startLocal->gte($endLocal)) {
+            return [];
+        }
+
+        DB::statement("SET time_zone='+00:00';");
+
+        $startUtc = $startLocal->copy()->setTimezone('UTC');
+        $endUtc = $endLocal->copy()->setTimezone('UTC');
+
+        $rows = DB::table('miners')
+            ->join('chain', 'chain.height', '=', 'miners.height')
+            ->select('miners.address', DB::raw('SUM(miners.miniblock) AS total_miniblocks'))
+            ->where('chain.timestamp', '>=', $startUtc->format('Y-m-d H:i:s'))
+            ->where('chain.timestamp', '<', $endUtc->format('Y-m-d H:i:s'))
+            ->groupBy('miners.address')
+            ->get();
+
+        $totals = [];
+        foreach ($rows as $row) {
+            $totals[$row->address] = (float) $row->total_miniblocks;
+        }
+
+        return $totals;
+    }
+
+    private function queryTopMinerPositions(Carbon $startLocal, Carbon $endLocal, string $tz, array $addresses): array {
+        if ($startLocal->gte($endLocal) || empty($addresses)) {
+            return [];
+        }
+
+        DB::statement("SET time_zone='+00:00';");
+
+        $startUtc = $startLocal->copy()->setTimezone('UTC');
+        $endUtc = $endLocal->copy()->setTimezone('UTC');
+
+        $placeholders = implode(',', array_fill(0, count($addresses), '?'));
+
+        $sql = "
+            SELECT ranked.local_date, ranked.address, ranked.position, ranked.total_miniblocks
+            FROM (
+                SELECT
+                    DATE(CONVERT_TZ(chain.timestamp, 'UTC', ?)) AS local_date,
+                    miners.address AS address,
+                    SUM(miners.miniblock) AS total_miniblocks,
+                    DENSE_RANK() OVER (
+                        PARTITION BY DATE(CONVERT_TZ(chain.timestamp, 'UTC', ?))
+                        ORDER BY SUM(miners.miniblock) DESC
+                    ) AS position
+                FROM chain
+                JOIN miners ON chain.height = miners.height
+                WHERE chain.timestamp >= ? AND chain.timestamp < ?
+                GROUP BY local_date, miners.address
+            ) AS ranked
+            WHERE ranked.address IN ($placeholders)
+            ORDER BY ranked.local_date ASC, ranked.position ASC
+        ";
+
+        $bindings = array_merge(
+            [$tz, $tz, $startUtc->format('Y-m-d H:i:s'), $endUtc->format('Y-m-d H:i:s')],
+            $addresses
+        );
+
+        $rows = DB::select($sql, $bindings);
+
+        $result = [];
+        foreach ($rows as $row) {
+            $date = Carbon::createFromFormat('Y-m-d', $row->local_date, $tz)->format('Y-m-d');
+            if (! isset($result[$date])) {
+                $result[$date] = [];
+            }
+
+            $result[$date][$row->address] = [
+                'position' => (int) $row->position,
+                'total_miniblocks' => (float) $row->total_miniblocks,
+            ];
+        }
+
+        return $result;
     }
 
     public function get_wallet_daily_gain(string $address, int $days = 10, string $tz = 'UTC') {

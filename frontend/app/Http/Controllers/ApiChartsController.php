@@ -43,6 +43,68 @@ class ApiChartsController extends Controller
         return $chain->get_top_miners_in_last_24h($validated['address']);
     }
 
+    public function get_active_miners_over_time(Request $request, ChainRepositoryInterface $chain) {
+        $validated = $this->validate($request, [
+            'tz' => 'required|timezone',
+            'days' => 'nullable|integer|min:1|max:90',
+        ]);
+
+        $days = $validated['days'] ?? 30;
+
+        $series = $chain->get_active_miners_over_time($days, $validated['tz']);
+
+        $labels = $series['data']->pluck('date')->map(function ($date) use ($validated) {
+            return Carbon::createFromFormat('Y-m-d', $date, $validated['tz'])
+                ->startOfDay()
+                ->toIso8601String();
+        });
+
+        $data = [
+            'labels' => $labels,
+            'data' => $series['data']->pluck('active_miners'),
+            'updated_at' => Carbon::createFromFormat('Y-m-d H:i:s', $series['updated_at'], $validated['tz'])->format('M d,  H:i'),
+        ];
+
+        return response()->json($data, 200, [], JSON_NUMERIC_CHECK);
+    }
+
+    public function get_top_miners_positions_over_time(Request $request, ChainRepositoryInterface $chain) {
+        $validated = $this->validate($request, [
+            'tz' => 'required|timezone',
+            'days' => 'nullable|integer|min:1|max:90',
+            'limit' => 'nullable|integer|min:1|max:20',
+        ]);
+
+        $days = $validated['days'] ?? 30;
+        $limit = $validated['limit'] ?? 10;
+
+        $series = $chain->get_top_miners_positions_over_time($days, $limit, $validated['tz']);
+
+        $labels = collect($series['dates'])->map(function ($date) use ($validated) {
+            return Carbon::createFromFormat('Y-m-d', $date, $validated['tz'])
+                ->startOfDay()
+                ->toIso8601String();
+        });
+
+        $payloadSeries = collect($series['series'])->map(function ($item) {
+            return [
+                'address' => $item['address'],
+                'label' => $item['label'],
+                'positions' => $item['positions'],
+                'totals' => $item['totals'],
+                'today_position' => $item['today_position'] ?? null,
+            ];
+        });
+
+        $data = [
+            'labels' => $labels,
+            'series' => $payloadSeries,
+            'updated_at' => Carbon::createFromFormat('Y-m-d H:i:s', $series['updated_at'], $validated['tz'])->format('M d,  H:i'),
+        ];
+
+        return response()->json($data, 200, [], JSON_NUMERIC_CHECK);
+    }
+
     public function get_wallet_daily_gain(Request $request, ChainRepositoryInterface $chain) {
         $validated = $this->validate($request, [
             'tz'      => 'required|timezone',

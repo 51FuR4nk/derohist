@@ -24,4 +24,8 @@ interface ChainRepositoryInterface {
 
     public function get_hourly_difficulty(int $hours = 48, string $tz = 'UTC');
 
+    public function get_active_miners_over_time(int $days = 30, string $tz = 'UTC');
+
+    public function get_top_miners_positions_over_time(int $days = 30, int $limit = 10, string $tz = 'UTC');
+
 }
