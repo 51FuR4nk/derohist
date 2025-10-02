@@ -286,36 +286,26 @@ class DeroChainRepository implements ChainRepositoryInterface {
             $startUtc = $startLocal->copy()->setTimezone('UTC');
             $endUtc = $endLocal->copy()->setTimezone('UTC');
 
-            $addressRows = DB::table('miners')
+            $aggregates = DB::table('miners')
                 ->join('chain', 'chain.height', '=', 'miners.height')
-                ->select('chain.timestamp', DB::raw('SUM(miners.miniblock) AS miniblocks'), DB::raw('AVG(chain.difficulty) AS difficulty'))
-                ->where('miners.address', $address)
+                ->selectRaw(
+                    'DATE(CONVERT_TZ(chain.timestamp, "UTC", ?)) as local_date, '
+                    . 'SUM(CASE WHEN miners.address = ? THEN miners.miniblock * (chain.difficulty / 1000.0) ELSE 0 END) as numerator, '
+                    . 'SUM(miners.miniblock) as denominator',
+                    [$tz, $address]
+                )
                 ->where('chain.timestamp', '>=', $startUtc->format('Y-m-d H:i:s'))
                 ->where('chain.timestamp', '<', $endUtc->format('Y-m-d H:i:s'))
-                ->groupBy('chain.height', 'chain.timestamp')
-                ->orderBy('chain.timestamp')
+                ->groupBy('local_date')
+                ->orderBy('local_date')
                 ->get();
 
             $numerator = [];
-            foreach ($addressRows as $row) {
-                $localKey = Carbon::parse($row->timestamp, 'UTC')->setTimezone($tz)->format('Y-m-d');
-                $weighted = (float) $row->miniblocks * ((float) $row->difficulty / 1000.0);
-                $numerator[$localKey] = ($numerator[$localKey] ?? 0.0) + $weighted;
-            }
-
-            $totalRows = DB::table('miners')
-                ->join('chain', 'chain.height', '=', 'miners.height')
-                ->select('chain.timestamp', DB::raw('SUM(miners.miniblock) AS total_miniblocks'))
-                ->where('chain.timestamp', '>=', $startUtc->format('Y-m-d H:i:s'))
-                ->where('chain.timestamp', '<', $endUtc->format('Y-m-d H:i:s'))
-                ->groupBy('chain.height', 'chain.timestamp')
-                ->orderBy('chain.timestamp')
-                ->get();
-
             $denominator = [];
-            foreach ($totalRows as $row) {
-                $localKey = Carbon::parse($row->timestamp, 'UTC')->setTimezone($tz)->format('Y-m-d');
-                $denominator[$localKey] = ($denominator[$localKey] ?? 0.0) + (float) $row->total_miniblocks;
+            foreach ($aggregates as $row) {
+                $localKey = Carbon::createFromFormat('Y-m-d', $row->local_date, $tz)->format('Y-m-d');
+                $numerator[$localKey] = (float) $row->numerator;
+                $denominator[$localKey] = (float) $row->denominator;
             }
 
             foreach ($slots as $key => $slot) {
