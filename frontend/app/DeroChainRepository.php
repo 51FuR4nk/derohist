@@ -8,6 +8,9 @@ use Illuminate\Support\Facades\Http;
 use Carbon\Carbon;
 
 class DeroChainRepository implements ChainRepositoryInterface {
+    private const MINIBLOCK_REWARD_CHANGE_HEIGHT = 7000000;
+    private const MINIBLOCK_REWARD_BEFORE_CHANGE = 0.0615;
+    private const MINIBLOCK_REWARD_FROM_CHANGE = 0.03075;
 
     public function get_avg_difficulty_per_last_n_days(int $days = 7, $tz = 'UTC') {
         DB::statement("SET time_zone='+00:00';");
@@ -86,8 +89,9 @@ class DeroChainRepository implements ChainRepositoryInterface {
     public function get_miners_last_24h_summary(string $tz = 'UTC', int $limit = 300) {
         $windowStart = Carbon::now('UTC')->subDay()->format('Y-m-d H:i:s');
         $cacheKey = sprintf('miners.summary.%s.%s', strtolower($tz), $limit);
+        $miniblockGainSql = self::miniblockGainSql('chain.height', 'miners.miniblock');
 
-        $payload = Cache::remember($cacheKey, 120, function () use ($windowStart, $limit) {
+        $payload = Cache::remember($cacheKey, 120, function () use ($windowStart, $limit, $miniblockGainSql) {
             DB::statement("SET time_zone='+00:00';");
 
             $baseQuery = DB::table('miners')
@@ -104,6 +108,7 @@ class DeroChainRepository implements ChainRepositoryInterface {
                 ->groupBy('miners.address')
                 ->selectRaw('miners.address,
                     SUM(miners.miniblock) as miniblocks,
+                    SUM(' . $miniblockGainSql . ') as miniblock_gain,
                     SUM(miners.fees) as fees,
                     SUM(miners.miniblock * (chain.difficulty / 1000)) as weighted_power')
                 ->orderByDesc('miniblocks')
@@ -122,9 +127,10 @@ class DeroChainRepository implements ChainRepositoryInterface {
         $records = $payload['records']->values()->map(function ($miner, $index) use ($totalMiniblocks) {
             $miniblocks = (int) $miner->miniblocks;
             $weightedPower = (float) $miner->weighted_power;
+            $miniblockGain = isset($miner->miniblock_gain) ? (float) $miner->miniblock_gain : 0.0;
             $fees = isset($miner->fees) ? (float) $miner->fees : 0.0;
 
-            $gain = ($miniblocks + $fees) * 0.0615;
+            $gain = $miniblockGain + $fees;
 
             $miner->miniblocks = $miniblocks;
             $miner->gain = round($gain, 6);
@@ -501,7 +507,7 @@ class DeroChainRepository implements ChainRepositoryInterface {
 
             $rows = DB::table('miners')
                 ->join('chain', 'chain.height', '=', 'miners.height')
-                ->select('chain.timestamp', DB::raw('SUM(miners.miniblock) AS miniblocks'), DB::raw('SUM(miners.fees) AS fees'))
+                ->select('chain.height', 'chain.timestamp', DB::raw('SUM(miners.miniblock) AS miniblocks'), DB::raw('SUM(miners.fees) AS fees'))
                 ->where('miners.address', $address)
                 ->where('chain.timestamp', '>=', $startUtc->format('Y-m-d H:i:s'))
                 ->where('chain.timestamp', '<', $endUtc->format('Y-m-d H:i:s'))
@@ -512,7 +518,7 @@ class DeroChainRepository implements ChainRepositoryInterface {
             foreach ($rows as $row) {
                 $localKey = Carbon::parse($row->timestamp, 'UTC')->setTimezone($tz)->format('Y-m-d');
                 if (isset($slots[$localKey])) {
-                    $gain = ((float) $row->miniblocks + (float) $row->fees) * 0.0615;
+                    $gain = ((float) $row->miniblocks * self::miniblockRewardForHeight((int) $row->height)) + (float) $row->fees;
                     $slots[$localKey]->gain += $gain;
                 }
             }
@@ -668,9 +674,10 @@ class DeroChainRepository implements ChainRepositoryInterface {
                 ->selectRaw('height, timestamp')
                 ->where('timestamp', '>=', $startUtc->format('Y-m-d H:i:s'))
                 ->where('timestamp', '<', $endUtc->format('Y-m-d H:i:s'));
+            $miniblockGainSql = self::miniblockGainSql('c1.height', 'miniblock');
 
             $rows = DB::table(DB::raw('(' . $subQuery->toSql() . ') as c1'))
-                ->selectRaw('DATE(timestamp) as date, HOUR(timestamp) as hour, (COALESCE(SUM(miniblock), 0) * 0.0615) + COALESCE(SUM(fees), 0) as gain')
+                ->selectRaw('DATE(timestamp) as date, HOUR(timestamp) as hour, COALESCE(SUM(' . $miniblockGainSql . '), 0) + COALESCE(SUM(fees), 0) as gain')
                 ->leftJoin('miners', 'c1.height', '=', 'miners.height')
                 ->mergeBindings($subQuery)
                 ->where('address', $address)
@@ -738,6 +745,23 @@ class DeroChainRepository implements ChainRepositoryInterface {
                 'data' => $slots->sortKeys()->values(),
             ];
         });
+    }
+
+    private static function miniblockGainSql(string $heightColumn, string $miniblockColumn): string {
+        return sprintf(
+            '%s * CASE WHEN %s >= %d THEN %.5F ELSE %.4F END',
+            $miniblockColumn,
+            $heightColumn,
+            self::MINIBLOCK_REWARD_CHANGE_HEIGHT,
+            self::MINIBLOCK_REWARD_FROM_CHANGE,
+            self::MINIBLOCK_REWARD_BEFORE_CHANGE
+        );
+    }
+
+    private static function miniblockRewardForHeight(int $height): float {
+        return $height >= self::MINIBLOCK_REWARD_CHANGE_HEIGHT
+            ? self::MINIBLOCK_REWARD_FROM_CHANGE
+            : self::MINIBLOCK_REWARD_BEFORE_CHANGE;
     }
 
     private function fetch_network_height(): ?int {
