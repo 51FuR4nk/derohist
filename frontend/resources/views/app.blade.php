@@ -98,6 +98,33 @@
       .side-menu-link:hover {
         color: #cb0c9f;
       }
+      .derohist-navbar {
+        gap: 1rem;
+      }
+      .derohist-navbar-brand {
+        flex: 0 0 auto;
+      }
+      .derohist-search-form {
+        flex: 1 1 auto;
+        margin-left: auto;
+        max-width: 760px;
+        min-width: 240px;
+      }
+      .derohist-search-box {
+        min-width: 0;
+      }
+      .derohist-search-box .form-control {
+        min-width: 0;
+      }
+      .derohist-navbar-links {
+        flex: 0 0 auto;
+      }
+      .donation-icon-btn {
+        height: 1.5rem;
+        justify-content: center;
+        line-height: 1;
+        width: 1.5rem;
+      }
       .donation-address-btn {
         font-family: 'Droid Sans Mono', monospace;
         display: flex;
@@ -113,6 +140,25 @@
         border-color: #cb0c9f !important;
         color: #fff !important;
       }
+      @media (max-width: 767.98px) {
+        .derohist-navbar {
+          flex-wrap: wrap;
+          gap: 0.75rem;
+        }
+        .derohist-search-form {
+          flex: 0 0 100%;
+          margin-left: 0;
+          max-width: none;
+          min-width: 0;
+          order: 3;
+        }
+        .derohist-navbar-links {
+          margin-left: auto;
+        }
+        .derohist-search-box {
+          margin-right: 0 !important;
+        }
+      }
     </style>
   </head>
   <body class="g-sidenav-show bg-gray-100">
@@ -125,8 +171,8 @@
     <main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg ">
       <!-- Navbar Dark -->
       <nav class="navbar navbar-expand-lg navbar-dark bg-gradient-dark z-index-3 py-2">
-        <div class="container d-flex align-items-center justify-content-between">
-          <div class="d-flex align-items-center">
+        <div class="container d-flex align-items-center justify-content-between derohist-navbar">
+          <div class="d-flex align-items-center derohist-navbar-brand">
             <button id="menuToggle" class="menu-toggle text-white" aria-label="Apri menu" aria-controls="sideMenu" aria-expanded="false">
               <i class="fas fa-bars fa-lg"></i>
             </button>
@@ -134,25 +180,21 @@
               DEROHIST
             </a>
           </div>
-          <div class="row align-items-center" style="flex-grow: 1; justify-content: end;">
-            <div class="col-auto" style="flex-grow: 0.8;">
-              <form method="get" class="d-flex justify-content-end">
-                <div class="bg-white border-radius-lg d-flex me-2 w-100">
-                  <input type="text" class="form-control border-0 ps-3" placeholder="Your wallet public address..." name="address" value="{{ request('address') }}">
-                  <button class="btn bg-gradient-primary my-1 me-1">Apply</button>
-                </div>
-              </form>
+          <form method="get" class="d-flex justify-content-end derohist-search-form">
+            <div class="bg-white border-radius-lg d-flex w-100 derohist-search-box">
+              <input type="text" class="form-control border-0 ps-3" placeholder="Your wallet public address..." name="address" value="{{ request('address') }}">
+              <button class="btn bg-gradient-primary my-1 me-1">Apply</button>
             </div>
-            <div class="col-auto d-flex align-items-center gap-3">
-              <a href="https://github.com/51FuR4nk/derohist" class="text-white d-flex align-items-center" target="_blank" rel="noopener noreferrer" aria-label="Open project GitHub repository">
-                <i class="fab fa-github fa-lg"></i>
-              </a>
-              @if($donationFileAvailable)
-                <button type="button" class="text-white bg-transparent border-0 d-flex align-items-center p-0" data-bs-toggle="modal" data-bs-target="#donationModal" aria-label="Open donations modal" style="margin-top: 2px; line-height: 1;">
-                  <i class="fas fa-donate fa-lg"></i>
-                </button>
-              @endif
-            </div>
+          </form>
+          <div class="d-flex align-items-center gap-3 derohist-navbar-links">
+            <a href="https://github.com/51FuR4nk/derohist" class="text-white d-flex align-items-center" target="_blank" rel="noopener noreferrer" aria-label="Open project GitHub repository">
+              <i class="fab fa-github fa-lg"></i>
+            </a>
+            @if($donationFileAvailable)
+              <button type="button" class="text-white bg-transparent border-0 d-flex align-items-center p-0 donation-icon-btn" data-bs-toggle="modal" data-bs-target="#donationModal" aria-label="Open donations modal">
+                <i class="fas fa-donate fa-lg"></i>
+              </button>
+            @endif
           </div>
         </div>
       </nav>
