@@ -42,6 +42,7 @@ All services are orchestrated through `docker-compose.yml`. The default bind mou
 |-----|-------------|------------------|
 | `APP_KEY` | Laravel application key shared with the frontend container. Required. | *(none)* |
 | `APP_URL` | Canonical public URL used for link generation. | `https://derohist.xyz` |
+| `FRONTEND_PORT` | Host port mapped to the frontend container. | `8085` |
 | `SESSION_DOMAIN` | Domain scope for browser sessions/cookies. | `derohist.xyz` |
 | `SESSION_SECURE_COOKIE` | Set to `true` when the site is served via HTTPS. | `true` |
 | `TRUST_PROXIES` | IP/CIDR list forwarded to Laravel’s proxy trust middleware. | `"*"` |
@@ -75,7 +76,7 @@ The first boot will:
 2. Build the Laravel image, install Composer dependencies and warm caches.
 3. Build the Python worker image and start the chain synchroniser.
 
-Once the `frontend` service reports healthy, browse to **http://localhost:8085**.
+Once the `frontend` service reports healthy, browse to **http://localhost:8085** (or the port configured through `FRONTEND_PORT`).
 
 To stop and clean up:
 

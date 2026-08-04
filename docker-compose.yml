@@ -41,7 +41,7 @@ services:
       mariadb:
         condition: service_healthy
     ports:
-      - "8085:80"
+      - "${FRONTEND_PORT:-8085}:80"
     volumes:
       - frontend_storage:/var/www/html/storage
       - ./frontend/.env:/var/www/html/.env
