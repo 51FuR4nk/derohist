@@ -26,13 +26,15 @@ All services are orchestrated through `docker-compose.yml`. The default bind mou
    cp .env.example .env
    ```
 
-2. Generate a Laravel application key (32‑byte base64 string) and place it in `APP_KEY` inside `.env`:
+2. Generate a Laravel application key and place it in `APP_KEY` inside `.env`. The encoded 32-byte key must include Laravel's required `base64:` prefix:
 
    ```bash
    php artisan key:generate --show          # if PHP is installed locally
    # or
-   openssl rand -base64 32
+   printf 'base64:%s\n' "$(openssl rand -base64 32)"
    ```
+
+   The resulting entry must have this form: `APP_KEY=base64:<encoded-key>`. Using the raw output of `openssl rand -base64 32` without the prefix causes Laravel to report an incorrect key length.
 
 3. Review the remaining keys (see the table below). Most deployments can keep the defaults, but adjust the URL/domain values if you are running behind HTTPS or a custom host.
 
@@ -40,7 +42,7 @@ All services are orchestrated through `docker-compose.yml`. The default bind mou
 
 | Key | Description | Default/example |
 |-----|-------------|------------------|
-| `APP_KEY` | Laravel application key shared with the frontend container. Required. | *(none)* |
+| `APP_KEY` | Laravel application key shared with the frontend container. Must start with `base64:`. Required. | `base64:<encoded-key>` |
 | `APP_URL` | Canonical public URL used for link generation. | `https://derohist.xyz` |
 | `FRONTEND_PORT` | Host port mapped to the frontend container. | `8085` |
 | `SESSION_DOMAIN` | Domain scope for browser sessions/cookies. | `derohist.xyz` |
