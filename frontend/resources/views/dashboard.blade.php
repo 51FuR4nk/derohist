@@ -9,7 +9,7 @@
                   <div class="col-8">
                     <div class="numbers">
                       <p class="text-sm mb-0 text-capitalize font-weight-bold">Value (DERO / USD)</p>
-                      <h5 class="font-weight-bolder mb-0"> ${{ number_format($price['dero']['usd'], 2, ',', '.') }} <span class="{{ $price['dero']['usd_24h_change'] > 0 ? 'text-success' : 'text-danger' }} text-sm font-weight-bolder">{{ $price['dero']['usd_24h_change'] > 0 ? '+' : '' }}{{ number_format($price['dero']['usd_24h_change'], 2, ',', '.') }}%</span>
+                      <h5 class="font-weight-bolder mb-0"> ${{ number_format($price['dero']['usd'], 3, ',', '.') }} <span class="{{ $price['dero']['usd_24h_change'] > 0 ? 'text-success' : 'text-danger' }} text-sm font-weight-bolder">{{ $price['dero']['usd_24h_change'] > 0 ? '+' : '' }}{{ number_format($price['dero']['usd_24h_change'], 2, ',', '.') }}%</span>
                       </h5>
                     </div>
                   </div>
