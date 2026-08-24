@@ -1,6 +1,7 @@
 services:
   mariadb:
     image: mariadb:11.4
+    restart: unless-stopped
     command: [
       "mariadbd",
       "--max-connections=120",
@@ -26,6 +27,7 @@ services:
     build:
       context: .
       dockerfile: frontend/Dockerfile
+    restart: unless-stopped
     environment:
       APP_ENV: local
       APP_DEBUG: "true"
@@ -50,6 +52,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    restart: unless-stopped
     environment:
       DB_HOST: mariadb
       DB_NAME: appdb
